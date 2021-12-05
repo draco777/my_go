@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,18 +13,16 @@ import (
 
 func NewRouter() chi.Router {
 	r := chi.NewRouter()
-
-	r.Route("/", func(r chi.Router) {
-		r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-			brand := chi.URLParam(r, "id")
-			w.Write([]byte("id:" + brand))
-		})
-	})
+	r.Get("/{id}", handleGet)
+	r.Post("/", handlePost)
 	return r
 }
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
-	req, err := http.NewRequest(method, ts.URL+path, nil)
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, body string) (*http.Response, string) {
+
+	data := []byte(body)
+	r := bytes.NewReader(data)
+	req, err := http.NewRequest(method, ts.URL+path, r)
 	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -42,8 +41,12 @@ func TestRouter(t *testing.T) {
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
-	resp, body := testRequest(t, ts, "GET", "/0")
+	resp, body := testRequest(t, ts, "GET", "/0", "")
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-	assert.Equal(t, "brand:renault", body)
+	assert.Equal(t, "Плохой запрос\n", body)
+
+	resp, body = testRequest(t, ts, "POST", "/", "my.ru")
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "http://localhost:8080/0", body)
 
 }
