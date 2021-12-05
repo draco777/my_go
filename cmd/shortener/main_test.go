@@ -20,6 +20,7 @@ func NewRouter() chi.Router {
 func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
 	req, err := http.NewRequest(method, ts.URL+path, nil)
 	require.NoError(t, err)
+	req.Body.Close()
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
