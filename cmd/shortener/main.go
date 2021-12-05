@@ -47,7 +47,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	println("Добавлен новое значние", id)
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(id))
+	w.Write([]byte("localhost:8080/" + id))
 
 }
 
