@@ -7,24 +7,24 @@ import (
 	"strings"
 )
 
-type MyUrl struct {
+type MyURL struct {
 	ID      string
-	LongUrl string
+	LongURL string
 }
 
-var myurl = []MyUrl{}
+var myurl = []MyURL{}
 
 func handleGet(w http.ResponseWriter, r *http.Request) {
 	q := strings.Replace(r.URL.Path, "/", "", -1)
 	if q == "" {
-		http.Error(w, "The id parameter is missing", http.StatusBadRequest)
+		http.Error(w, "The id parameter is missing", http.StatusCreated)
 		return
 	}
 	println("Получен запрос GET id = ", q)
 
 	for i := range myurl {
 		if myurl[i].ID == q {
-			http.Redirect(w, r, myurl[i].LongUrl, 301)
+			http.Redirect(w, r, myurl[i].LongURL, http.StatusMovedPermanently)
 			return
 		}
 	}
@@ -41,7 +41,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	println("Получен запрос POST", string(url))
 
 	id := strconv.Itoa(len(myurl))
-	myurl = append(myurl, MyUrl{id, string(url)})
+	myurl = append(myurl, MyURL{id, string(url)})
 
 	println("Добавлен новое значние", id)
 
