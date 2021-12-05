@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 type MyURL struct {
@@ -15,15 +15,16 @@ type MyURL struct {
 var myurl = []MyURL{}
 
 func handleGet(w http.ResponseWriter, r *http.Request) {
-	q := strings.Replace(r.URL.Path, "/", "", -1)
-	if q == "" {
+	println("Пришли в ГЕТ")
+	id := chi.URLParam(r, "id")
+	if id == "" {
 		http.Error(w, "The id parameter is missing", http.StatusBadRequest)
 		return
 	}
-	println("Получен запрос GET id = ", q)
+	println("Получен запрос GET id = ", id)
 
 	for i := range myurl {
-		if myurl[i].ID == q {
+		if myurl[i].ID == id {
 			http.Redirect(w, r, myurl[i].LongURL, http.StatusTemporaryRedirect)
 			return
 		}
@@ -50,21 +51,11 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// HelloWorld — обработчик запроса.
-func RestHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		handleGet(w, r)
-	case http.MethodPost:
-		handlePost(w, r)
-
-	}
-}
-
 func main() {
+	r := chi.NewRouter()
+	r.Get("/{id}", handleGet)
+	r.Post("/", handlePost)
 
-	// маршрутизация запросов обработчику
-	http.HandleFunc("/", RestHandler)
 	// запуск сервера с адресом localhost, порт 8080
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", r)
 }
