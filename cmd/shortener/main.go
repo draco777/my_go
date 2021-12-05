@@ -17,18 +17,18 @@ var myurl = []MyURL{}
 func handleGet(w http.ResponseWriter, r *http.Request) {
 	q := strings.Replace(r.URL.Path, "/", "", -1)
 	if q == "" {
-		http.Error(w, "The id parameter is missing", http.StatusCreated)
+		http.Error(w, "The id parameter is missing", http.StatusBadRequest)
 		return
 	}
 	println("Получен запрос GET id = ", q)
 
 	for i := range myurl {
 		if myurl[i].ID == q {
-			http.Redirect(w, r, myurl[i].LongURL, http.StatusMovedPermanently)
+			http.Redirect(w, r, myurl[i].LongURL, http.StatusTemporaryRedirect)
 			return
 		}
 	}
-	http.Error(w, "Плохой запрос", http.StatusBadRequest)
+	http.Error(w, "Плохой запрос", http.StatusTemporaryRedirect)
 
 }
 
@@ -45,7 +45,9 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 
 	println("Добавлен новое значние", id)
 
+	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(id))
+
 }
 
 // HelloWorld — обработчик запроса.
