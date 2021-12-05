@@ -37,6 +37,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body st
 }
 
 func TestRouter(t *testing.T) {
+
 	r := NewRouter()
 	ts := httptest.NewServer(r)
 	defer ts.Close()

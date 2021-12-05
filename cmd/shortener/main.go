@@ -44,7 +44,6 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("http://localhost:8080/" + id))
-
 }
 
 func main() {
