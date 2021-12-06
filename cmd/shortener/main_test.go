@@ -43,10 +43,12 @@ func TestRouter(t *testing.T) {
 	defer ts.Close()
 
 	resp, body := testRequest(t, ts, "GET", "/0", "")
+	resp.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.Equal(t, "Плохой запрос\n", body)
 
 	resp, body = testRequest(t, ts, "POST", "/", "my.ru")
+	resp.Body.Close()
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	assert.Equal(t, "http://localhost:8080/0", body)
 
