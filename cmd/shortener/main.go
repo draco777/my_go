@@ -60,7 +60,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := strconv.Itoa(len(myurl))
-	myurl = append(myurl, MyURL{config.BaseURL + "/" + id, string(url)})
+	myurl = append(myurl, MyURL{"http://" + config.BaseURL + "/" + id, string(url)})
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("http://" + config.BaseURL + "/" + id))
@@ -112,6 +112,7 @@ func init() {
 	flag.StringVar(&config.Host, "a", config.Host, "host to listen on")
 	flag.StringVar(&config.BaseURL, "b", config.BaseURL, "baseUrl")
 	flag.StringVar(&config.FileStorage, "f", config.FileStorage, "fileStorage")
+	flag.Parse()
 
 	fmt.Println(config)
 
