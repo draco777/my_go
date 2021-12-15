@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 )
 
@@ -28,9 +27,8 @@ type OutStr struct {
 var myurl = []MyURL{}
 
 var config struct {
-	Host        string `env:"SERVER_ADDRESS" envDefault:"localhost"`
-	Port        string `env:"PORT" envDefault:"8080"`
-	BaseUrl     string `env:"BASE_URL" envDefault:"localhost"`
+	Host        string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
+	BaseURL     string `env:"BASE_URL" envDefault:"localhost:8080"`
 	FileStorage string `env:"FILE_STORAGE_PATH" envDefault:"myfile"`
 }
 
@@ -45,7 +43,7 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(config)
 
 	for i := range myurl {
-		if myurl[i].ID == id {
+		if myurl[i].ID == config.BaseURL+"/"+id {
 			http.Redirect(w, r, myurl[i].LongURL, http.StatusTemporaryRedirect)
 			return
 		}
@@ -62,24 +60,26 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := strconv.Itoa(len(myurl))
-	myurl = append(myurl, MyURL{id, string(url)})
+	myurl = append(myurl, MyURL{config.BaseURL + "/" + id, string(url)})
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("http://localhost:8080/" + id))
+	w.Write([]byte(config.BaseURL + "/" + id))
 }
 
 func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
-	var my_str InStr
-	err := decoder.Decode(&my_str)
+	var myStr InStr
+	err := decoder.Decode(&myStr)
 	if err != nil {
 		http.Error(w, "The Body is missing", http.StatusBadRequest)
 		return
 	}
 
+	fmt.Println(myStr)
+
 	for i := range myurl {
-		if myurl[i].ID == my_str.URL {
+		if myurl[i].ID == myStr.URL {
 			w.Header().Set("content-type", "application/json")
 			w.WriteHeader(http.StatusOK)
 
@@ -92,6 +92,7 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 			}
 			// пишем тело ответа
 			w.Write(resp)
+			return
 		}
 	}
 	http.Error(w, "The Body is missing", http.StatusBadRequest)
@@ -106,26 +107,14 @@ func init() {
 		panic(err)
 	}
 
+	//	Получим данные из командной строки
+
+	flag.StringVar(&config.Host, "a", config.Host, "host to listen on")
+	flag.StringVar(&config.BaseURL, "b", config.BaseURL, "baseUrl")
+	flag.StringVar(&config.FileStorage, "f", config.FileStorage, "fileStorage")
+
 	fmt.Println(config)
 
-	//
-	flag.StringVar(&config.Port, "port", "8080", "port to listen on")
-	flag.StringVar(&config.Host, "a", "localhost", "host to listen on")
-	flag.StringVar(&config.BaseUrl, "b", "localhost", "baseUrl")
-	flag.StringVar(&config.FileStorage, "f", "", "fileStorage")
-
-	// Проверим что файл хранения не задан
-	if config.FileStorage == "" {
-		file, err := os.CreateTemp(os.TempDir(), "myfile")
-		if err != nil {
-			panic(err)
-		}
-		config.FileStorage = file.Name()
-
-		defer file.Close()
-	}
-
-	fmt.Println(config.FileStorage)
 }
 
 func main() {
@@ -136,5 +125,5 @@ func main() {
 	r.Post("/api/shorten", handlePostJSON)
 
 	// запуск сервера с адресом localhost, порт 8080
-	http.ListenAndServe(config.Host+":"+"8080", r)
+	http.ListenAndServe(config.Host, r)
 }
