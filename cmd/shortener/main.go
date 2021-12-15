@@ -63,7 +63,7 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	myurl = append(myurl, MyURL{config.BaseURL + "/" + id, string(url)})
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(config.BaseURL + "/" + id))
+	w.Write([]byte("http://" + config.BaseURL + "/" + id))
 }
 
 func handlePostJSON(w http.ResponseWriter, r *http.Request) {
