@@ -36,6 +36,10 @@ var config struct {
 	FileStorage string `env:"FILE_STORAGE_PATH" envDefault:"myfile"`
 }
 
+type ApiError struct {
+	Error string `json:"error"`
+}
+
 func handleGet(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
@@ -76,7 +80,9 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 	var myStr InStr
 	err := decoder.Decode(&myStr)
 	if err != nil {
-		w.Write("{\"error\":\"1 The Body is missing\"}")
+		b := ApiError{"The Body is missing"}
+		resp, _ := json.Marshal(b)
+		w.Write(resp)
 		http.Error(w, "1 The Body is missing", http.StatusBadRequest)
 		return
 	}
@@ -93,6 +99,9 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 			// кодируем JSON
 			resp, err := json.Marshal(subj)
 			if err != nil {
+				b := ApiError{"The Body is missing"}
+				resp, _ := json.Marshal(b)
+				w.Write(resp)
 				http.Error(w, "2 The Body is missing", http.StatusBadRequest)
 				return
 			}
@@ -101,6 +110,9 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	b := ApiError{"The Body is missing"}
+	resp, _ := json.Marshal(b)
+	w.Write(resp)
 	http.Error(w, "3 The Body is missing", http.StatusBadRequest)
 
 }
