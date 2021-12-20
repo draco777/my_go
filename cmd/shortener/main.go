@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
@@ -36,10 +35,6 @@ var config struct {
 	FileStorage string `env:"FILE_STORAGE_PATH" envDefault:"myfile"`
 }
 
-type APIError struct {
-	Error string `json:"error"`
-}
-
 func handleGet(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
@@ -47,8 +42,6 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "The id parameter is missing", http.StatusBadRequest)
 		return
 	}
-
-	fmt.Println(config)
 
 	for i := range myurl {
 		if myurl[i].ID == config.BaseURL+"/"+id {
@@ -74,67 +67,6 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(config.BaseURL + "/" + id))
 }
 
-func handlePostJSON(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
-	decoder := json.NewDecoder(r.Body)
-	var myStr InStr
-	err := decoder.Decode(&myStr)
-	if err != nil {
-		b := APIError{"The Body is missing"}
-		resp, _ := json.Marshal(b)
-		w.Write(resp)
-		http.Error(w, "1 The Body is missing", http.StatusBadRequest)
-		return
-	}
-
-	id := strconv.Itoa(len(myurl))
-	myurl = append(myurl, MyURL{config.BaseURL + "/" + id, myStr.URL})
-	w.WriteHeader(http.StatusCreated)
-	subj := OutStr{config.BaseURL + "/" + id}
-	// кодируем JSON
-	resp, err := json.Marshal(subj)
-	w.Write(resp)
-}
-
-func handleGetJSON(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("content-type", "application/json")
-	decoder := json.NewDecoder(r.Body)
-	var myStr InStr
-	err := decoder.Decode(&myStr)
-	if err != nil {
-		b := APIError{"The Body is missing"}
-		resp, _ := json.Marshal(b)
-		w.Write(resp)
-		http.Error(w, "1 The Body is missing", http.StatusBadRequest)
-		return
-	}
-
-	for i := range myurl {
-		if myurl[i].ID == myStr.URL {
-
-			subj := OutStr{myurl[i].LongURL}
-			// кодируем JSON
-			resp, err := json.Marshal(subj)
-			if err != nil {
-				b := APIError{"The Body is missing"}
-				resp, _ := json.Marshal(b)
-				w.Write(resp)
-				http.Error(w, "2 The Body is missing", http.StatusBadRequest)
-				return
-			}
-			// пишем тело ответа
-			w.Write(resp)
-			http.Redirect(w, r, myurl[i].LongURL, http.StatusTemporaryRedirect)
-			return
-		}
-	}
-	b := APIError{"The Body is missing"}
-	resp, _ := json.Marshal(b)
-	w.Write(resp)
-	w.WriteHeader(http.StatusBadRequest)
-
-}
-
 func init() {
 	// Получим переменные окружения
 	err := env.Parse(&config)
@@ -144,13 +76,9 @@ func init() {
 	}
 
 	//	Получим данные из командной строки
-
 	flag.StringVar(&config.Host, "a", config.Host, "host to listen on")
 	flag.StringVar(&config.BaseURL, "b", config.BaseURL, "baseUrl")
 	flag.StringVar(&config.FileStorage, "f", config.FileStorage, "fileStorage")
-
-	fmt.Println(config)
-
 }
 
 func main() {
@@ -167,6 +95,7 @@ func main() {
 	r.Get("/api/shorten", handleGetJSON)
 
 	// запуск сервера
+
 	server := &http.Server{Addr: config.Host, Handler: r}
 
 	go func() {
@@ -179,11 +108,10 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
-	SaveDate(config.FileStorage)
+
 	// Attempt a graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-
+	SaveDate(config.FileStorage)
 	defer cancel()
 	server.Shutdown(ctx)
-
 }
