@@ -71,11 +71,12 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlePostJSON(w http.ResponseWriter, r *http.Request) {
-
+	w.Header().Set("content-type", "application/json")
 	decoder := json.NewDecoder(r.Body)
 	var myStr InStr
 	err := decoder.Decode(&myStr)
 	if err != nil {
+		w.Write("{\"error\":\"1 The Body is missing\"}")
 		http.Error(w, "1 The Body is missing", http.StatusBadRequest)
 		return
 	}
@@ -85,7 +86,7 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 
 	for i := range myurl {
 		if myurl[i].LongURL == myStr.URL {
-			w.Header().Set("content-type", "application/json")
+
 			w.WriteHeader(http.StatusOK)
 
 			subj := OutStr{myurl[i].ID}
@@ -139,7 +140,7 @@ func main() {
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
-			// handle err
+			panic(err)
 		}
 	}()
 
