@@ -86,14 +86,28 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "1 The Body is missing", http.StatusBadRequest)
 		return
 	}
-	fmt.Println(myurl)
-	fmt.Println(myStr)
-	fmt.Println(myStr.URL)
+
+	id := strconv.Itoa(len(myurl))
+	myurl = append(myurl, MyURL{config.BaseURL + "/" + id, myStr.URL})
+	w.WriteHeader(http.StatusCreated)
+	return
+}
+
+func handleGetJSON(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("content-type", "application/json")
+	decoder := json.NewDecoder(r.Body)
+	var myStr InStr
+	err := decoder.Decode(&myStr)
+	if err != nil {
+		b := APIError{"The Body is missing"}
+		resp, _ := json.Marshal(b)
+		w.Write(resp)
+		http.Error(w, "1 The Body is missing", http.StatusBadRequest)
+		return
+	}
 
 	for i := range myurl {
 		if myurl[i].LongURL == myStr.URL {
-
-			w.WriteHeader(http.StatusCreated)
 
 			subj := OutStr{myurl[i].ID}
 			// кодируем JSON
@@ -107,7 +121,7 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 			}
 			// пишем тело ответа
 			w.Write(resp)
-			return
+			http.Redirect(w, r, myurl[i].LongURL, http.StatusTemporaryRedirect)
 		}
 	}
 	b := APIError{"The Body is missing"}
@@ -146,6 +160,7 @@ func main() {
 	r.Get("/{id}", handleGet)
 	r.Post("/", handlePost)
 	r.Post("/api/shorten", handlePostJSON)
+	r.Get("/api/shorten", handleGetJSON)
 
 	// запуск сервера
 	server := &http.Server{Addr: config.Host, Handler: r}
