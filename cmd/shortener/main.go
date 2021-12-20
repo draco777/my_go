@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -8,12 +9,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"time"
 )
 
 type MyURL struct {
-	ID      string
-	LongURL string
+	ID      string `json:"id"`
+	LongURL string `json:"LongURL"`
 }
 
 type InStr struct {
@@ -28,7 +32,7 @@ var myurl = []MyURL{}
 
 var config struct {
 	Host        string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
-	BaseURL     string `env:"BASE_URL" envDefault:"localhost:8080"`
+	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FileStorage string `env:"FILE_STORAGE_PATH" envDefault:"myfile"`
 }
 
@@ -60,10 +64,10 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := strconv.Itoa(len(myurl))
-	myurl = append(myurl, MyURL{"http://" + config.BaseURL + "/" + id, string(url)})
+	myurl = append(myurl, MyURL{config.BaseURL + "/" + id, string(url)})
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("http://" + config.BaseURL + "/" + id))
+	w.Write([]byte(config.BaseURL + "/" + id))
 }
 
 func handlePostJSON(w http.ResponseWriter, r *http.Request) {
@@ -72,22 +76,23 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 	var myStr InStr
 	err := decoder.Decode(&myStr)
 	if err != nil {
-		http.Error(w, "The Body is missing", http.StatusBadRequest)
+		http.Error(w, "1 The Body is missing", http.StatusBadRequest)
 		return
 	}
-
+	fmt.Println(myurl)
 	fmt.Println(myStr)
+	fmt.Println(myStr.URL)
 
 	for i := range myurl {
-		if myurl[i].ID == myStr.URL {
+		if myurl[i].LongURL == myStr.URL {
 			w.Header().Set("content-type", "application/json")
 			w.WriteHeader(http.StatusOK)
 
-			subj := OutStr{myurl[i].LongURL}
+			subj := OutStr{myurl[i].ID}
 			// кодируем JSON
 			resp, err := json.Marshal(subj)
 			if err != nil {
-				http.Error(w, "The Body is missing", http.StatusBadRequest)
+				http.Error(w, "2 The Body is missing", http.StatusBadRequest)
 				return
 			}
 			// пишем тело ответа
@@ -95,7 +100,7 @@ func handlePostJSON(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	http.Error(w, "The Body is missing", http.StatusBadRequest)
+	http.Error(w, "3 The Body is missing", http.StatusBadRequest)
 
 }
 
@@ -112,7 +117,6 @@ func init() {
 	flag.StringVar(&config.Host, "a", config.Host, "host to listen on")
 	flag.StringVar(&config.BaseURL, "b", config.BaseURL, "baseUrl")
 	flag.StringVar(&config.FileStorage, "f", config.FileStorage, "fileStorage")
-	flag.Parse()
 
 	fmt.Println(config)
 
@@ -120,11 +124,34 @@ func init() {
 
 func main() {
 
+	flag.Parse()
+
+	// Прочитаем данные из файла
+	LoadDate(config.FileStorage)
+
 	r := chi.NewRouter()
 	r.Get("/{id}", handleGet)
 	r.Post("/", handlePost)
 	r.Post("/api/shorten", handlePostJSON)
 
-	// запуск сервера с адресом localhost, порт 8080
-	http.ListenAndServe(config.Host, r)
+	// запуск сервера
+	server := &http.Server{Addr: config.Host, Handler: r}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			// handle err
+		}
+	}()
+
+	// Wait for an interrupt
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	<-c
+	SaveDate(config.FileStorage)
+	// Attempt a graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+
+	defer cancel()
+	server.Shutdown(ctx)
+
 }
